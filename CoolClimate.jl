@@ -1,4 +1,3 @@
-using Plots: push!
 ## imports
 
 using Plots
@@ -55,7 +54,7 @@ scatter(process_num.(zip_df[:," popden "]), zip_df[:," Total Household Carbon Fo
 title!("Household Emissions vs Population Density by Zip Code")
 ylabel!("Total Household Carbon Footprint (tCO2e/yr)")
 xlabel!("Population Density (persons/sq mi)")
-savefig("./output/popden.png")
+savefig("./output/popden-household.png")
 
 ## retain desired rows/columns
 
@@ -71,3 +70,20 @@ zip_df = zip_df[:, [feature_cols; soln_col]]
 
 # maps each feature column to a tuple of the column name and the correlation coefficient
 correlations = map(col -> (col,cor(process_num.(zip_df[:,col]), zip_df[:,soln_col])), feature_cols)
+
+## calculate correlations per capita
+
+# perhaps unsurprisingly, we find that persons per household correlates fairly strongly with household emissions
+# so let's construct a more useful metric: emissions per capita
+zip_df."EmissionsPerCapita" = zip_df[:,soln_col] ./ zip_df[:, feature_cols[2]]
+soln_col = "EmissionsPerCapita"
+correlations = map(col -> (col,cor(process_num.(zip_df[:,col]), zip_df[:,soln_col])), feature_cols)
+
+## explore simple data per capita
+
+# plot!
+scatter(process_num.(zip_df[:," popden "]), zip_df[:, soln_col], legend=false)
+title!("Emissions Per Capita vs Population Density by Zip Code")
+ylabel!("Total Per-Capita Carbon Footprint (tCO2e/yr)")
+xlabel!("Population Density (persons/sq mi)")
+savefig("./output/popden-capita.png")
