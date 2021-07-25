@@ -1,3 +1,4 @@
+using Plots: push!
 ## imports
 
 using Plots
@@ -10,9 +11,12 @@ using Test
 
 ## load in data
 
-zipcode_data = DataFrame(CSV.File("Zip-Code-Results.csv"))
-city_data = DataFrame(CSV.File("City-Results.csv"))
-county_data = DataFrame(CSV.File("County-Results.csv"))
+# dataframe containing zipcode data
+zip_df = DataFrame(CSV.File("Zip-Code-Results.csv"))
+
+# TODO later
+# city_data = DataFrame(CSV.File("City-Results.csv"))
+# county_data = DataFrame(CSV.File("County-Results.csv"))
 
 ## declare helper functions
 
@@ -47,31 +51,23 @@ end
 ## explore simple data
 
 # plot!
-scatter(process_num.(zipcode_data[:," popden "]), zipcode_data[:," Total Household Carbon Footprint (tCO2e/yr) "], legend=false)
+scatter(process_num.(zip_df[:," popden "]), zip_df[:," Total Household Carbon Footprint (tCO2e/yr) "], legend=false)
 title!("Household Emissions vs Population Density by Zip Code")
 ylabel!("Total Household Carbon Footprint (tCO2e/yr)")
 xlabel!("Population Density (persons/sq mi)")
 savefig("./output/popden.png")
 
-## calculate correlations
+## retain desired rows/columns
 
 # define lists of relevant column names for easy indexing into the data frame
-all_cols = names(zipcode_data)
+all_cols = names(zip_df)
 feature_cols = ["Population", "PersonsPerHousehold", "AverageHouseValue", "IncomePerHousehold", "Latitude", "Longitude", "Elevation", " popden ", "electricity (kWh)", "Nat. Gas (cu.ft.)", "FUELOIL (gallons)", " Vehicle miles traveled ", "HouseholdsPerZipCode"]
 soln_col = " Total Household Carbon Footprint (tCO2e/yr) "
 
-# test to see the parsed data types of the columns
-for col ∈ feature_cols
-    println(typeof(zipcode_data[1,col]))
-end
+# limit dataframe to just feature and solution columns
+zip_df = zip_df[:, [feature_cols; soln_col]]
 
-cor(process_num.(zipcode_data[:," popden "]), zipcode_data[:,soln_col])
+## calculate correlations
 
-
-correlations = zeros(length(feature_cols))
-for col ∈ feature_cols
-    # calculate correlation of each col to household emissions
-    # because each col has different data types, process accordingly
-    cor(process_num.(zipcode_data[:,col]), zipcode_data[:,soln_col])
-end
-correlations = map(col -> (col,cor(process_num.(zipcode_data[:,col]), zipcode_data[:,soln_col])), feature_cols)
+# maps each feature column to a tuple of the column name and the correlation coefficient
+correlations = map(col -> (col,cor(process_num.(zip_df[:,col]), zip_df[:,soln_col])), feature_cols)
