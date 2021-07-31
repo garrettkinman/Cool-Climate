@@ -69,8 +69,10 @@ zip_df = zip_df[:, [feature_cols; soln_col]]
 
 ## calculate correlations
 
-# maps each feature column to a tuple of the column name and the correlation coefficient
-correlations = map(col -> (col,cor(process_num.(zip_df[:,col]), zip_df[:,soln_col])), feature_cols)
+# maps each feature column to the correlation coefficient
+correlations = map(col -> cor(process_num.(zip_df[:,col]), zip_df[:,soln_col]), feature_cols)
+cor_df = DataFrame(Names=feature_cols, Correlations=correlations)
+CSV.write("./output/correlations-household.csv", cor_df)
 
 ## calculate correlations per capita
 
