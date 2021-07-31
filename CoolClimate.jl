@@ -7,6 +7,7 @@ using Pipe
 using Statistics
 using BenchmarkTools
 using Test
+using Printf
 
 ## load in data
 
@@ -50,7 +51,7 @@ end
 ## explore simple data
 
 # plot!
-scatter(process_num.(zip_df[:," popden "]), zip_df[:," Total Household Carbon Footprint (tCO2e/yr) "], legend=false)
+scatter(process_num.(zip_df[:,"Population Density (persons/sq mi)"]), zip_df[:,"Total Household Carbon Footprint (tCO2e/yr)"], legend=false)
 title!("Household Emissions vs Population Density by Zip Code")
 ylabel!("Total Household Carbon Footprint (tCO2e/yr)")
 xlabel!("Population Density (persons/sq mi)")
@@ -60,8 +61,8 @@ savefig("./output/popden-household.png")
 
 # define lists of relevant column names for easy indexing into the data frame
 all_cols = names(zip_df)
-feature_cols = ["Population", "PersonsPerHousehold", "AverageHouseValue", "IncomePerHousehold", "Latitude", "Longitude", "Elevation", " popden ", "electricity (kWh)", "Nat. Gas (cu.ft.)", "FUELOIL (gallons)", " Vehicle miles traveled ", "HouseholdsPerZipCode"]
-soln_col = " Total Household Carbon Footprint (tCO2e/yr) "
+feature_cols = ["Population", "Persons Per Household", "Average House Value (USD)", "Income Per Household (USD)", "Latitude", "Longitude", "Elevation (ft)", "Population Density (persons/sq mi)", "Electricity (kWh)", "Natural Gas (cu ft)", "Fuel Oil (gal)", "Vehicle Miles Traveled", "Households Per Zip Code"]
+soln_col = "Total Household Carbon Footprint (tCO2e/yr)"
 
 # limit dataframe to just feature and solution columns
 zip_df = zip_df[:, [feature_cols; soln_col]]
@@ -75,15 +76,38 @@ correlations = map(col -> (col,cor(process_num.(zip_df[:,col]), zip_df[:,soln_co
 
 # perhaps unsurprisingly, we find that persons per household correlates fairly strongly with household emissions
 # so let's construct a more useful metric: emissions per capita
-zip_df."EmissionsPerCapita" = zip_df[:,soln_col] ./ zip_df[:, feature_cols[2]]
-soln_col = "EmissionsPerCapita"
-correlations = map(col -> (col,cor(process_num.(zip_df[:,col]), zip_df[:,soln_col])), feature_cols)
+zip_df."Emissions Per Capita (tCO2e/yr)" = zip_df[:,soln_col] ./ zip_df[:, feature_cols[2]]
+soln_col = "Emissions Per Capita (tCO2e/yr)"
+correlations = map(col -> (col,cor(abs.(process_num.(zip_df[:,col])), zip_df[:,soln_col])), feature_cols)
+
+## declare regex helper function
+
+# match enclosed parentheses at end of feature columns
+UNITS_REGEX = r"\([a-zA-Z\d/ ]*\)$"
+
+# strip enclosing parentheses and all spaces
+# for clean and elegant filenames
+process_name(str::AbstractString) = @pipe str |> replace(_, UNITS_REGEX=>"") |> replace(_, " "=>"")
+
+@test process_name.(feature_cols) == ["Population","PersonsPerHousehold","AverageHouseValue","IncomePerHousehold","Latitude","Longitude","Elevation","PopulationDensity","Electricity","NaturalGas","FuelOil","VehicleMilesTraveled","HouseholdsPerZipCode"]
+
 
 ## explore simple data per capita
 
 # plot!
-scatter(process_num.(zip_df[:," popden "]), zip_df[:, soln_col], legend=false)
-title!("Emissions Per Capita vs Population Density by Zip Code")
-ylabel!("Total Per-Capita Carbon Footprint (tCO2e/yr)")
-xlabel!("Population Density (persons/sq mi)")
-savefig("./output/popden-capita.png")
+for feature ∈  feature_cols
+    plot = scatter(process_num.(zip_df[:,feature]), zip_df[:, soln_col], legend=false)
+    title!(plot, "TODO")
+    ylabel!(plot, soln_col)
+    xlabel!(plot, feature)
+    savefig(plot, @sprintf("./output/%s.png", process_name(feature)))
+end
+
+## calculate correlations for different functions
+
+correlations_sq = map(col -> (col,cor(process_num.(zip_df[:,col]).^2, zip_df[:,soln_col])), feature_cols)
+correlations_sqrt = map(col -> (col,cor(.√(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col])), feature_cols)
+correlations_exp = map(col -> (col,cor(exp.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col])), feature_cols)
+correlations_ln = map(col -> (col,cor(log.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col])), feature_cols)
+
+features = DataFrame()
