@@ -95,7 +95,7 @@ process_name(str::AbstractString) = @pipe str |> strip_units |> replace(_, " "=>
 ## explore simple data per capita
 
 # plot!
-for feature ∈  feature_cols
+for feature ∈ feature_cols
     plot = scatter(process_num.(zip_df[:,feature]), zip_df[:, soln_col], legend=false)
     title!(plot, @sprintf("%s vs %s", strip(strip_units(soln_col)), strip(strip_units(feature))))
     ylabel!(plot, soln_col)
@@ -105,11 +105,19 @@ end
 
 ## calculate correlations for different functions
 
+# filter out zip codes with a population density of 0 or house value of 0
+# going off the plot, we want to see the logarithmic relationship for population density
+# and house value of 0 is just non-sensical, hence cleaning
+filter!(row -> process_num(row."Population Density (persons/sq mi)") != 0 && process_num(row."Average House Value (USD)") != 0, zip_df)
+
 correlations_sq = map(col -> cor(process_num.(zip_df[:,col]).^2, zip_df[:,soln_col]), feature_cols)
 correlations_sqrt = map(col -> cor(.√(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col]), feature_cols)
-correlations_exp = map(col -> cor(exp.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col]), feature_cols)
-correlations_ln = map(col -> cor(log.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col]), feature_cols)
+correlations_log = map(col -> cor(log.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col]), feature_cols)
 
-cor_df = DataFrame(Names=feature_cols, Raw=correlations, Sq=correlations_sq, Sqrt=correlations_sqrt, Exp=correlations_exp, Log=correlations_ln)
+# because some of our elevations are zero, we get NaN for log, so replace with missing to work more nicely in dataframe
+# but, unlike population density and house value, zero elevation makes sense and we want to keep
+correlations_log = replace(correlations_ln, NaN=>missing)
 
-##
+cor_df = DataFrame(Names=feature_cols, Raw=correlations, Sq=correlations_sq, Sqrt=correlations_sqrt, Log=correlations_ln)
+
+## 
