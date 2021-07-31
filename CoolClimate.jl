@@ -87,17 +87,17 @@ UNITS_REGEX = r"\([a-zA-Z\d/ ]*\)$"
 
 # strip enclosing parentheses and all spaces
 # for clean and elegant filenames
-process_name(str::AbstractString) = @pipe str |> replace(_, UNITS_REGEX=>"") |> replace(_, " "=>"")
+strip_units(str::AbstractString) = replace(str, UNITS_REGEX=>"")
+process_name(str::AbstractString) = @pipe str |> strip_units |> replace(_, " "=>"")
 
 @test process_name.(feature_cols) == ["Population","PersonsPerHousehold","AverageHouseValue","IncomePerHousehold","Latitude","Longitude","Elevation","PopulationDensity","Electricity","NaturalGas","FuelOil","VehicleMilesTraveled","HouseholdsPerZipCode"]
-
 
 ## explore simple data per capita
 
 # plot!
 for feature ∈  feature_cols
     plot = scatter(process_num.(zip_df[:,feature]), zip_df[:, soln_col], legend=false)
-    title!(plot, "TODO")
+    title!(plot, @sprintf("%s vs %s", strip(strip_units(soln_col)), strip(strip_units(feature))))
     ylabel!(plot, soln_col)
     xlabel!(plot, feature)
     savefig(plot, @sprintf("./output/%s.png", process_name(feature)))
