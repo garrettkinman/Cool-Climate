@@ -121,5 +121,6 @@ correlations_log = map(col -> cor(log.(abs.(process_num.(zip_df[:,col]))), zip_d
 correlations_log = replace(correlations_ln, NaN=>missing)
 
 cor_df = DataFrame(Names=feature_cols, Raw=correlations, Sq=correlations_sq, Sqrt=correlations_sqrt, Log=correlations_ln)
+CSV.write("./output/correlations-capita.csv", cor_df)
 
 ## 
