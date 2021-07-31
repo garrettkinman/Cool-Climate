@@ -61,7 +61,7 @@ savefig("./output/popden-household.png")
 
 # define lists of relevant column names for easy indexing into the data frame
 all_cols = names(zip_df)
-feature_cols = ["Population", "Persons Per Household", "Average House Value (USD)", "Income Per Household (USD)", "Latitude", "Longitude", "Elevation (ft)", "Population Density (persons/sq mi)", "Electricity (kWh)", "Natural Gas (cu ft)", "Fuel Oil (gal)", "Vehicle Miles Traveled", "Households Per Zip Code"]
+feature_cols = ["Population", "Persons Per Household", "Average House Value (USD)", "Income Per Household (USD)", "Latitude", "Longitude", "Elevation (ft)", "Population Density (persons/sq mi)", "Electricity (kWh)", "Natural Gas (cu ft)", "Vehicle Miles Traveled", "Households Per Zip Code"]
 soln_col = "Total Household Carbon Footprint (tCO2e/yr)"
 
 # limit dataframe to just feature and solution columns
@@ -78,7 +78,7 @@ correlations = map(col -> (col,cor(process_num.(zip_df[:,col]), zip_df[:,soln_co
 # so let's construct a more useful metric: emissions per capita
 zip_df."Emissions Per Capita (tCO2e/yr)" = zip_df[:,soln_col] ./ zip_df[:, feature_cols[2]]
 soln_col = "Emissions Per Capita (tCO2e/yr)"
-correlations = map(col -> (col,cor(abs.(process_num.(zip_df[:,col])), zip_df[:,soln_col])), feature_cols)
+correlations = map(col -> cor(abs.(process_num.(zip_df[:,col])), zip_df[:,soln_col]), feature_cols)
 
 ## declare regex helper function
 
@@ -90,7 +90,7 @@ UNITS_REGEX = r"\([a-zA-Z\d/ ]*\)$"
 strip_units(str::AbstractString) = replace(str, UNITS_REGEX=>"")
 process_name(str::AbstractString) = @pipe str |> strip_units |> replace(_, " "=>"")
 
-@test process_name.(feature_cols) == ["Population","PersonsPerHousehold","AverageHouseValue","IncomePerHousehold","Latitude","Longitude","Elevation","PopulationDensity","Electricity","NaturalGas","FuelOil","VehicleMilesTraveled","HouseholdsPerZipCode"]
+@test process_name.(feature_cols) == ["Population","PersonsPerHousehold","AverageHouseValue","IncomePerHousehold","Latitude","Longitude","Elevation","PopulationDensity","Electricity","NaturalGas","VehicleMilesTraveled","HouseholdsPerZipCode"]
 
 ## explore simple data per capita
 
@@ -105,9 +105,11 @@ end
 
 ## calculate correlations for different functions
 
-correlations_sq = map(col -> (col,cor(process_num.(zip_df[:,col]).^2, zip_df[:,soln_col])), feature_cols)
-correlations_sqrt = map(col -> (col,cor(.√(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col])), feature_cols)
-correlations_exp = map(col -> (col,cor(exp.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col])), feature_cols)
-correlations_ln = map(col -> (col,cor(log.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col])), feature_cols)
+correlations_sq = map(col -> cor(process_num.(zip_df[:,col]).^2, zip_df[:,soln_col]), feature_cols)
+correlations_sqrt = map(col -> cor(.√(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col]), feature_cols)
+correlations_exp = map(col -> cor(exp.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col]), feature_cols)
+correlations_ln = map(col -> cor(log.(abs.(process_num.(zip_df[:,col]))), zip_df[:,soln_col]), feature_cols)
 
-features = DataFrame()
+cor_df = DataFrame(Names=feature_cols, Raw=correlations, Sq=correlations_sq, Sqrt=correlations_sqrt, Exp=correlations_exp, Log=correlations_ln)
+
+##
